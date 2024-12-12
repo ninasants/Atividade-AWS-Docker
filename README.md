@@ -70,33 +70,49 @@ Clicar em "Add rule" e ir adicionando as seguintes configurações:
 
 Clicar em "Create security group"
 
-## 3) EFS (Elastic File System)
 
-O EFS é uma tecnologia da AWS que permite criar um sistema de arquivos elástico que cresce ou diminui automaticamente a capacidade de armazenamento de arquivos conforme as demandas de cada aplicação. No painel da AWS, devemos clicar em EFS para seguir até o dashboard e, na sequência, clicar em "Create File System" e depois em "Customize". Usaremos as seguintes configurações:
+## 3) Criação das Instâncias EC2 (Elastic Compute Cloud)
 
-> File System Settings
-* Name: Inserir um nome para o EFS
-O restante das configurações permanece como padrão.
-> Network Access
-*  Virtual Private Cloud: Selecionar a VPC que criamos (wordpress-vpc)
-   -  Mount Targets (Ponte de montagem 1)
-      - Availability Zone: us-east-1a
-      - Subnet ID: selecionar uma subrede "private"
-      - Security Group: Wordpress-Firewall
-  -  Mount Targets (Ponto de montagem 2)
-      - Availability Zone: us-east-1b
-      - Subnet ID: selecionar uma subrede "private"
-      - Security Group: Wordpress-Firewall  
+A Amazon oferece uma plataforma de computação chamada de Amazon Elastic Compute Cloud, ou simplesmete EC2, para criar máquinas virtuais chamadas de instâncias com diversas opções de processadores, armazenamento, redes e sistemas operacionais. A aplicação Wordpress será configurada usando a tecnologia de containers do docker dentro de cada instância EC2. Conforme o descritivo do projeto da Compass, podemos criar 2 instâncias EC2, cada uma em uma EZ (Availability Zone) distinta da outra. No painel da AWS, clicamos em "EC2" e seguimos para o dashboard de criação da instância. Clique em "Launch Instances" e, na tela de criação, usaremos os seguintes parâmetros para criar a instância:
 
-O restante das configurações de "File System Policy" e "Review and Update" permanecem como padrão. Clicar em "Create".
+> Name and tags (clicar em Add additional tags)
+  Usaremos um conjunto de 3 tags (Name, CostCenter, Project) conforme fornecidas pela Compasso:
+  (1)
+  * Key: Name
+  * Value: Inserir um nome para a instância (ex.: Wordpress-Instance1)
+  * Resource types: marcar "Instances" e "Volumes"
+  (2)
+  * Key: CostCenter
+  * Value: conforme fornecido pela Compass
+  * Resource types: marcar "Instances" e "Volumes"
+  (3)
+  * Key: Project
+  * Value: conforme fornecido pela Compass
+  * Resource types: marcar "Instances" e "Volumes"
 
-Na lista dos File Systems criados, podemos clicar no EFS que acabamos de criar e depois no botão "Attach", onde abrirar uma janela com informações para montarmos a EFS na instância EC2. Usaremos a opção "Mout via IP", dentro da Availability Zone "us-east-1a". Portanto, devemos guardar o comando citado abaixo da frase "Using the NFS cliente". Como exemplo, temos o comando:
+> Application and OS images
+  * Ubuntu Noble 24.04 amd64 (Free tier eligible)
 
-````
-sudo mount -t nfs4 -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 10.0.135.121:/ /efs
-````
+> Instance type
+  *t2.micro (Free tier eligible)
 
-O qual será usado para realizar a montagem via assistente NFS no Ubuntu, conforme veremos mais à frente na seção comentada "Montagem do EFS" do script user data.
+> Key pair (login)
+  * Key pair name: usar a key pair criada na etapa anterior
+
+> Network settings (clicar em Edit)
+  * VPC: usar a VPC criada
+  * Subnet: usar uma subnet pública, preferencial na zona us-east-1a
+  * Auto-assign public IP: Disable
+  * Firewall (security groups)
+    * Select existing security group: selecionar o security group criado inicialmente (Wordpress-Firewall)
+
+> Advanced Details
+  * User data: Neste campo vamos inserir o script user data para automatizar as tarefas de instalação do docker e Wordpress na inicialização da EC2. Podemos copiar e colar ou realizar uploado do arquivo.
+
+Clicar em "Launch Instance" e depois em "View all Instances". Aguardar o processo de criação e validação da instância, acompanhando pelo painel.
+
+Após o processo de validação da Instância, podemos atribuir um IP elástico a mesma para realizar a conexão SSH e verificar o estado da máquina antes de iniciar o serviço Wordpress. Para isso, vamos até a parte inferior esquerda do dashboard EC2, na seção "Network and Security" clique em "Elastic IPs". Selecione o IP criado anteriormente para a instância, clique em "Actions" e depois em "Associate Elastic IP adress".
+Na janela que se segue, selecione a Instância que está rodando, o IP privado e clique em "Associate".
 
 ## 4) Banco de dados Amazon RDS (Relational Data Base)
 
@@ -220,46 +236,3 @@ Clique em "Create key pair" e será aberta uma janela para salvar o arquivo .pem
 sudo chmod 400 nomedachave.pem
 ````
 
-
-## 8) Criação das Instâncias EC2 (Elastic Compute Cloud)
-
-A Amazon oferece uma plataforma de computação chamada de Amazon Elastic Compute Cloud, ou simplesmete EC2, para criar máquinas virtuais chamadas de instâncias com diversas opções de processadores, armazenamento, redes e sistemas operacionais. A aplicação Wordpress será configurada usando a tecnologia de containers do docker dentro de cada instância EC2. Conforme o descritivo do projeto da Compass, podemos criar 2 instâncias EC2, cada uma em uma EZ (Availability Zone) distinta da outra. No painel da AWS, clicamos em "EC2" e seguimos para o dashboard de criação da instância. Clique em "Launch Instances" e, na tela de criação, usaremos os seguintes parâmetros para criar a instância:
-
-> Name and tags (clicar em Add additional tags)
-  Usaremos um conjunto de 3 tags (Name, CostCenter, Project) conforme fornecidas pela Compasso:
-  (1)
-  * Key: Name
-  * Value: Inserir um nome para a instância (ex.: Wordpress-Instance1)
-  * Resource types: marcar "Instances" e "Volumes"
-  (2)
-  * Key: CostCenter
-  * Value: conforme fornecido pela Compass
-  * Resource types: marcar "Instances" e "Volumes"
-  (3)
-  * Key: Project
-  * Value: conforme fornecido pela Compass
-  * Resource types: marcar "Instances" e "Volumes"
-
-> Application and OS images
-  * Ubuntu Noble 24.04 amd64 (Free tier eligible)
-
-> Instance type
-  *t2.micro (Free tier eligible)
-
-> Key pair (login)
-  * Key pair name: usar a key pair criada na etapa anterior
-
-> Network settings (clicar em Edit)
-  * VPC: usar a VPC criada
-  * Subnet: usar uma subnet pública, preferencial na zona us-east-1a
-  * Auto-assign public IP: Disable
-  * Firewall (security groups)
-    * Select existing security group: selecionar o security group criado inicialmente (Wordpress-Firewall)
-
-> Advanced Details
-  * User data: Neste campo vamos inserir o script user data para automatizar as tarefas de instalação do docker e Wordpress na inicialização da EC2. Podemos copiar e colar ou realizar uploado do arquivo.
-
-Clicar em "Launch Instance" e depois em "View all Instances". Aguardar o processo de criação e validação da instância, acompanhando pelo painel.
-
-Após o processo de validação da Instância, podemos atribuir um IP elástico a mesma para realizar a conexão SSH e verificar o estado da máquina antes de iniciar o serviço Wordpress. Para isso, vamos até a parte inferior esquerda do dashboard EC2, na seção "Network and Security" clique em "Elastic IPs". Selecione o IP criado anteriormente para a instância, clique em "Actions" e depois em "Associate Elastic IP adress".
-Na janela que se segue, selecione a Instância que está rodando, o IP privado e clique em "Associate".
